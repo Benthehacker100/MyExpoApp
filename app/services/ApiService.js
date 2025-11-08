@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RegistrationService from './RegistrationService';
 
-const BASE_URL = 'http://105.114.25.157:5000';
+const BASE_URL = 'http://105.114.25.157';
 const DEVICE_ID_KEY = '@registered_device_id';
 
 async function resolvePhoneId() {

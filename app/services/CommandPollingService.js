@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { stopRecording, triggerRecording } from './AudioService';
 import RegistrationService from './RegistrationService';
 
-const BASE_URL = 'http://105.114.25.157:5000';
+const BASE_URL = 'http://105.114.25.157';
 const DEVICE_ID_KEY = '@registered_device_id';
 let pollingInterval = null;
 let isPolling = false;

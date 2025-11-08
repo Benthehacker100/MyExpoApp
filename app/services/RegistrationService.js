@@ -3,7 +3,7 @@ import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
-const BASE_URL = 'http://105.114.25.157:5000';
+const BASE_URL = 'http://105.114.25.157';
 const DEVICE_ID_KEY = '@registered_device_id';
 
 /**
@@ -89,17 +89,20 @@ export class RegistrationService {
         };
       }
       
-      // Create device ID similar to Android format
+      // Create device ID using the actual UUID
       const deviceId = this.generateDeviceId(deviceInfo);
+      
+      // Create a friendly display name (like "Apple iPhone 12")
+      const displayName = deviceInfo.deviceName || `${deviceInfo.brand || 'Apple'} ${deviceInfo.modelName || 'Device'}`;
       
       // Prepare registration data (similar to Android's device data structure)
       const registrationData = {
-        phone_id: deviceId,
-        device_name: deviceInfo.deviceName,
+        phone_id: deviceId,  // This is now the actual UUID
+        device_name: displayName,  // Friendly name for display
         device_info: deviceInfo,
         platform: 'ios',
-        uuid: deviceInfo.uuid,
-        android_id: deviceInfo.uuid,
+        uuid: deviceInfo.uuid,  // Explicit UUID field
+        android_id: deviceInfo.uuid,  // Backend compatibility
         registration_timestamp: new Date().toISOString(),
         registration_date: new Date().toLocaleString()
       };
@@ -250,18 +253,27 @@ export class RegistrationService {
   }
   
   /**
-   * Generate device ID similar to Android format
-   * Android uses: Build.MANUFACTURER + Build.MODEL
+   * Generate device ID using the actual UUID
+   * The UUID is the unique identifier for iOS devices
    */
   static generateDeviceId(deviceInfo) {
     try {
-      // Create device ID similar to Android format
-      const manufacturer = (deviceInfo.manufacturer || 'Apple').replace(/\s+/g, '');
-      const model = (deviceInfo.modelName || 'Unknown').replace(/\s+/g, '_');
-      const deviceId = `${manufacturer}_${model}_iOS`;
+      // Use the actual UUID as the device ID (this is the unique identifier)
+      const uuid = deviceInfo.uuid;
       
-      console.log('🆔 Generated device ID:', deviceId);
-      return deviceId;
+      // Validate UUID before using it
+      if (!uuid || uuid === 'Unknown iOS UUID' || uuid === 'Unknown Android UUID' || uuid.trim().length === 0) {
+        console.error('❌ Cannot generate device ID - invalid UUID:', uuid);
+        // Fallback to model-based ID only if UUID is completely unavailable
+        const manufacturer = (deviceInfo.manufacturer || 'Apple').replace(/\s+/g, '');
+        const model = (deviceInfo.modelName || 'Unknown').replace(/\s+/g, '_');
+        const fallbackId = `${manufacturer}_${model}_iOS_${Date.now()}`;
+        console.warn('⚠️ Using fallback device ID:', fallbackId);
+        return fallbackId;
+      }
+      
+      console.log('🆔 Generated device ID from UUID:', uuid);
+      return uuid;
       
     } catch (error) {
       console.error('❌ Error generating device ID:', error);
