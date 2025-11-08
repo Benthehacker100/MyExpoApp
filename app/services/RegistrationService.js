@@ -98,6 +98,8 @@ export class RegistrationService {
         device_name: deviceInfo.deviceName,
         device_info: deviceInfo,
         platform: 'ios',
+        uuid: deviceInfo.uuid,
+        android_id: deviceInfo.uuid,
         registration_timestamp: new Date().toISOString(),
         registration_date: new Date().toLocaleString()
       };

@@ -50,6 +50,7 @@ export async function sendRecordingEvent(eventType, latitude, longitude, extra =
       timestamp: new Date().toISOString(),
       event: eventType,
       source: source,
+      platform: 'ios',
       ...extraPayload,
     };
 
@@ -109,6 +110,7 @@ export async function uploadAudioFile(fileUri) {
       name: `recording_${Date.now()}.m4a`,
       type: 'audio/mp4',
     });
+    formData.append('platform', 'ios');
 
     const response = await fetch(endpoint, {
       method: 'POST',
