@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "MyExpoApp",
+    "slug": "MyExpoApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myexpoapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs location access to show your current coordinates in toast notifications every 5 seconds.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs background location access to automatically send location data even when the app is closed.",
+        "NSLocationAlwaysUsageDescription": "This app needs background location access to automatically send location data even when the app is closed.",
+        "NSCameraUsageDescription": "This app needs camera access for photo capture functionality.",
+        "NSMicrophoneUsageDescription": "This app needs microphone access for audio recording functionality.",
+        "UIBackgroundModes": [
+          "location",
+          "background-processing",
+          "background-fetch"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      "expo-task-manager",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "This app needs microphone access to record audio with location data."
+        }
+      ],
+      "expo-audio"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
