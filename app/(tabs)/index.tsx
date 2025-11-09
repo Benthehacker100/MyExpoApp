@@ -8,13 +8,9 @@ import { Alert, Button, Linking, ScrollView, StyleSheet, Text, TouchableOpacity,
 import {
     downloadAudioFile,
     getAudioQualityInfo,
-    getIntervalRecordingStatus,
     getRecordedAudioFiles,
     shareAudioFile,
-    startIntervalRecording,
-    stopIntervalRecording,
     stopRecording,
-    triggerRecording
 } from '../services/AudioService';
 import { setCameraRef, takePicture } from '../services/CameraService';
 import { startCommandPolling, stopCommandPolling, storeDeviceId, testBackendConnectivity } from '../services/CommandPollingService';
@@ -37,7 +33,6 @@ export default function HomeScreen() {
   const [enabled, setEnabled] = useState(false);
   const [locationToastEnabled, setLocationToastEnabled] = useState(false);
   const [locationUpdateCount, setLocationUpdateCount] = useState(0);
-  const [intervalRecordingEnabled, setIntervalRecordingEnabled] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showCamera, setShowCamera] = useState(false);
@@ -128,18 +123,13 @@ export default function HomeScreen() {
     initializeApp();
   }, []);
 
-  // Deep link handler: myexpoapp://record?duration=30 and myexpoapp://stop
+  // Deep link handler: myexpoapp://stop only
   useEffect(() => {
     const handleUrl = (eventUrl: string) => {
       try {
         const url = new URL(eventUrl);
         const action = url.hostname || url.pathname.replace('/', '');
-        if (action === 'record') {
-          const durationParam = url.searchParams.get('duration');
-          const duration = durationParam ? parseInt(durationParam, 10) : 10;
-          triggerRecording('deeplink', isNaN(duration) ? 10 : duration);
-          Alert.alert('🎙️ Recording', `Started via link for ${isNaN(duration) ? 10 : duration}s`);
-        } else if (action === 'stop') {
+        if (action === 'stop') {
           stopRecording();
           Alert.alert('⏹️ Recording', 'Stopped via link');
         }
@@ -157,11 +147,10 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // Cleanup location toasts, interval recording, and command polling when component unmounts
+  // Cleanup location toasts and command polling when component unmounts
   useEffect(() => {
     return () => {
       stopLocationToastUpdates();
-      stopIntervalRecording();
       stopCommandPolling();
     };
   }, []);
@@ -448,48 +437,6 @@ export default function HomeScreen() {
       Alert.alert('🎤 Microphone Test', `❌ Error: ${error?.message || 'Unknown error'}`);
     }
   };
-
-  const toggleIntervalRecording = async () => {
-    if (intervalRecordingEnabled) {
-      stopIntervalRecording();
-      setIntervalRecordingEnabled(false);
-      Alert.alert('🎤 Interval Recording', 'Interval recording stopped.');
-    } else {
-      // Start recording every 2 minutes for 20 seconds (for testing)
-      startIntervalRecording(2, 20);
-      setIntervalRecordingEnabled(true);
-      Alert.alert('🎤 Interval Recording', 'Started recording every 2 minutes for 20 seconds.');
-    }
-    
-    // Refresh audio files list if it's currently shown
-    if (showAudioFiles) {
-      await loadAudioFiles();
-    }
-  };
-
-  const triggerManualRecording = () => {
-    Alert.alert(
-      '🎤 Manual Recording',
-      'How long should the recording be?',
-      [
-        { text: '10 seconds', onPress: () => triggerRecording('manual', 10) },
-        { text: '30 seconds', onPress: () => triggerRecording('manual', 30) },
-        { text: '60 seconds', onPress: () => triggerRecording('manual', 60) },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
-  };
-
-  const checkRecordingStatus = () => {
-    const status = getIntervalRecordingStatus();
-    Alert.alert(
-      '🎤 Recording Status',
-      `Interval Recording: ${status.isActive ? 'Active' : 'Inactive'}\n` +
-      `Timer Set: ${status.hasTimer ? 'Yes' : 'No'}\n` +
-      `Currently Recording: ${status.isCurrentlyRecording ? 'Yes' : 'No'}`
-    );
-  };
-
   const handleCameraRef = (ref: any) => {
     cameraRef.current = ref;
     setCameraRef(ref);
@@ -615,25 +562,14 @@ export default function HomeScreen() {
           color="#9b59b6"
         />
         <Button 
-          title={intervalRecordingEnabled ? "⏹️ Stop Auto Recording" : "⏺️ Start Auto Recording"} 
-          onPress={toggleIntervalRecording}
-          color={intervalRecordingEnabled ? "#e74c3c" : "#27ae60"}
-        />
-        <Button 
-          title="🎙️ Manual Record" 
-          onPress={triggerManualRecording}
-          color="#f39c12"
-        />
-        <Button 
-          title="📊 Check Status" 
-          onPress={checkRecordingStatus}
-          color="#3498db"
-        />
-        <Button 
           title={showAudioFiles ? "📁 Hide Files" : "📁 Show Files"} 
           onPress={toggleAudioFiles}
           color="#8e44ad"
         />
+        <Text style={styles.helpText}>
+          📍 Audio recording is controlled remotely from the dashboard.{'\n'}
+          Use the dashboard to start/stop recording.
+        </Text>
       </View>
 
       {/* Audio Files Section */}
@@ -683,7 +619,6 @@ export default function HomeScreen() {
         <Text style={styles.statusText}>
           Tracking: {locationToastEnabled ? `🟢 Active (${locationUpdateCount} updates sent)` : '🔴 Inactive'}
         </Text>
-        <Text style={styles.statusText}>Recording: {intervalRecordingEnabled ? '🟢 Active' : '🔴 Inactive'}</Text>
         <Text style={styles.statusText}>Dashboard: {registrationStatus === 'registered' ? '✅ Connected' : 
                                         registrationStatus === 'registering' ? '⏳ Connecting...' :
                                         registrationStatus === 'failed' ? '❌ Failed' : '❌ Not Connected'}</Text>
