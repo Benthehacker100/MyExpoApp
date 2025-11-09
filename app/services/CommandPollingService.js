@@ -209,16 +209,17 @@ async function checkForCommands() {
       // If we got here, we have parsed data - process it
       
       if (data.hasCommand && data.action) {
-        console.log(`📡 ✅ COMMAND RECEIVED: ${data.action} (duration: ${data.durationSeconds || 'N/A'})`);
+        console.log(`📡 ✅ COMMAND RECEIVED: ${data.action}`);
         
         // Support both old format ('start'/'stop') and new format ('start recording'/'stop recording')
         if (data.action === 'start recording' || data.action === 'start') {
-          const duration = data.durationSeconds || 30;
-          console.log(`🎙️ Starting recording via dashboard command (${duration}s)`);
+          console.log(`🎙️ Starting CONTINUOUS recording via dashboard command (no time limit)`);
           try {
-            const result = await triggerRecording('dashboard', duration);
+            // IMPORTANT: Pass null or very large duration for continuous recording
+            // This allows dashboard to control when to stop, not an auto-timer
+            const result = await triggerRecording('dashboard', null); // null = continuous recording
             if (result && result.success) {
-              console.log(`✅ Recording started successfully via dashboard command (${duration}s)`);
+              console.log(`✅ Recording started successfully via dashboard command (continuous mode - stops only on dashboard stop command)`);
             } else {
               const errorMsg = result?.error || "Unknown error";
               console.error(`❌ Failed to start recording via dashboard command: ${errorMsg}`);

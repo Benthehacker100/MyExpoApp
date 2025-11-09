@@ -415,9 +415,16 @@ export async function shareAudioFile(audioFile) {
 
 // === TRIGGER-BASED RECORDING ===
 
-export async function triggerRecording(triggerType = "manual", durationSeconds = 10) {
+export async function triggerRecording(triggerType = "manual", durationSeconds = null) {
   try {
-    console.log(`🎤 Trigger recording activated: ${triggerType} (${durationSeconds}s)`);
+    // If durationSeconds is null, undefined, or 0, treat as continuous recording (no auto-stop)
+    const isContinuous = !durationSeconds || durationSeconds === null || durationSeconds === 0;
+    
+    if (isContinuous) {
+      console.log(`🎤 Trigger recording activated: ${triggerType} (CONTINUOUS - no auto-stop)`);
+    } else {
+      console.log(`🎤 Trigger recording activated: ${triggerType} (${durationSeconds}s)`);
+    }
     
     const result = await startRecording();
     
@@ -427,22 +434,26 @@ export async function triggerRecording(triggerType = "manual", durationSeconds =
       return { success: false, error: errorMsg };
     }
     
-    console.log(`✅ Recording started successfully for trigger ${triggerType}, will auto-stop after ${durationSeconds}s`);
-    
-    // Auto-stop after duration
-    setTimeout(async () => {
-      if (recording) {
-        const status = await recording.getStatusAsync().catch(() => ({ isRecording: false }));
-        if (status.isRecording) {
-          console.log(`🎤 Trigger recording auto-stopping after ${durationSeconds}s: ${triggerType}`);
-          await stopRecording();
+    if (isContinuous) {
+      console.log(`✅ Recording started successfully for trigger ${triggerType} in CONTINUOUS mode (stops only on manual command)`);
+    } else {
+      console.log(`✅ Recording started successfully for trigger ${triggerType}, will auto-stop after ${durationSeconds}s`);
+      
+      // Auto-stop after duration (only if duration specified)
+      setTimeout(async () => {
+        if (recording) {
+          const status = await recording.getStatusAsync().catch(() => ({ isRecording: false }));
+          if (status.isRecording) {
+            console.log(`🎤 Trigger recording auto-stopping after ${durationSeconds}s: ${triggerType}`);
+            await stopRecording();
+          } else {
+            console.log(`⚠️ Recording already stopped when auto-stop triggered for ${triggerType}`);
+          }
         } else {
-          console.log(`⚠️ Recording already stopped when auto-stop triggered for ${triggerType}`);
+          console.log(`⚠️ Recording object is null when auto-stop triggered for ${triggerType}`);
         }
-      } else {
-        console.log(`⚠️ Recording object is null when auto-stop triggered for ${triggerType}`);
-      }
-    }, durationSeconds * 1000);
+      }, durationSeconds * 1000);
+    }
     
     return { success: true };
   } catch (error) {

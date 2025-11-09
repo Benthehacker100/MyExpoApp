@@ -19,7 +19,7 @@ import {
 import { setCameraRef, takePicture } from '../services/CameraService';
 import { startCommandPolling, stopCommandPolling, storeDeviceId, testBackendConnectivity } from '../services/CommandPollingService';
 import { getDeviceInfo, registerDeviceWithDashboard, testDashboardConnection } from '../services/DeviceService';
-import { startLocationToastUpdates, stopLocationToastUpdates } from '../services/LocationService';
+import { startLocationToastUpdates, stopLocationToastUpdates, getLocationUpdateStats } from '../services/LocationService';
 
 const openAppSettings = () => {
   // NEVER try to open settings - just show instructions (prevents freezing)
@@ -36,6 +36,7 @@ export default function HomeScreen() {
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [enabled, setEnabled] = useState(false);
   const [locationToastEnabled, setLocationToastEnabled] = useState(false);
+  const [locationUpdateCount, setLocationUpdateCount] = useState(0);
   const [intervalRecordingEnabled, setIntervalRecordingEnabled] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -45,6 +46,18 @@ export default function HomeScreen() {
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [showAudioFiles, setShowAudioFiles] = useState(false);
   const cameraRef = useRef(null);
+
+  // Periodically update location stats
+  useEffect(() => {
+    if (locationToastEnabled) {
+      const statsInterval = setInterval(() => {
+        const stats = getLocationUpdateStats();
+        setLocationUpdateCount(stats.updateCount);
+      }, 10000); // Update every 10 seconds
+      
+      return () => clearInterval(statsInterval);
+    }
+  }, [locationToastEnabled]);
 
   // Get device info and auto-request permissions on component mount
   useEffect(() => {
@@ -667,7 +680,9 @@ export default function HomeScreen() {
         <Text style={styles.statusText}>Audio: {audioStatus}</Text>
         <Text style={styles.statusText}>Location: {locationStatus}</Text>
         <Text style={styles.statusText}>App: {enabled ? '✅ Enabled' : '❌ Disabled'}</Text>
-        <Text style={styles.statusText}>Tracking: {locationToastEnabled ? '🟢 Active (every 5min)' : '🔴 Inactive'}</Text>
+        <Text style={styles.statusText}>
+          Tracking: {locationToastEnabled ? `🟢 Active (${locationUpdateCount} updates sent)` : '🔴 Inactive'}
+        </Text>
         <Text style={styles.statusText}>Recording: {intervalRecordingEnabled ? '🟢 Active' : '🔴 Inactive'}</Text>
         <Text style={styles.statusText}>Dashboard: {registrationStatus === 'registered' ? '✅ Connected' : 
                                         registrationStatus === 'registering' ? '⏳ Connecting...' :
