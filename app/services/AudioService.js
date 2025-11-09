@@ -1,22 +1,40 @@
-import { Audio } from 'expo-av';
+import { Audio, InterruptionModeIOS } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { fetchLocationAndUploadAudio } from './LocationService';
+import { fetchLocation, fetchLocationAndUploadAudio } from './LocationService';
+import { sendRecordingEvent } from './ApiService';
 
 let recording = null;
 let intervalRecordingTimer = null;
 let isIntervalRecordingActive = false;
 
+async function notifyRecordingStatus(eventType, extra = {}) {
+  try {
+    const { latitude, longitude } = await fetchLocation();
+    await sendRecordingEvent(eventType, latitude, longitude, {
+      platform: 'ios',
+      ...extra,
+    });
+  } catch (error) {
+    console.log(`⚠️ Failed to send recording status "${eventType}":`, error.message);
+  }
+}
+
 export async function startRecording() {
   try {
     // Check if already recording
     if (recording) {
-      const status = await recording.getStatusAsync();
-      if (status.isRecording) {
-        console.log("⚠️ Recording already in progress, skipping start");
-        return { success: false, error: "Recording already in progress" };
-      } else {
+      try {
+        const status = await recording.getStatusAsync();
+        if (status?.isRecording) {
+          console.log("⚠️ Recording already in progress, reusing existing session");
+          return {
+            success: true,
+            alreadyRecording: true,
+            message: "Recording already in progress",
+          };
+        }
         // Recording object exists but not recording - clean it up
         console.log("🧹 Cleaning up stale recording object");
         try {
@@ -24,8 +42,15 @@ export async function startRecording() {
         } catch (cleanupError) {
           console.log("Cleanup error (non-critical):", cleanupError.message);
         }
-        recording = null;
+      } catch (statusError) {
+        console.log("⚠️ Could not inspect existing recording status:", statusError.message);
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch (cleanupError) {
+          console.log("Cleanup error (non-critical):", cleanupError.message);
+        }
       }
+      recording = null;
     }
 
     console.log("🎤 Requesting audio permissions...");
@@ -42,6 +67,8 @@ export async function startRecording() {
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
     });
 
     console.log("🎤 Creating new Audio.Recording instance...");
@@ -433,6 +460,20 @@ export async function triggerRecording(triggerType = "manual", durationSeconds =
       console.error(`❌ Failed to start recording for trigger ${triggerType}: ${errorMsg}`);
       return { success: false, error: errorMsg };
     }
+
+    if (result.alreadyRecording) {
+      console.log(`ℹ️ Recording already in progress for trigger ${triggerType} (treated as success)`);
+      await notifyRecordingStatus('recording_already_active', {
+        trigger: triggerType,
+        mode: isContinuous ? 'continuous' : 'timed',
+      });
+      return { success: true, alreadyRecording: true };
+    }
+
+    await notifyRecordingStatus('recording_started', {
+      trigger: triggerType,
+      mode: isContinuous ? 'continuous' : 'timed',
+    });
     
     if (isContinuous) {
       console.log(`✅ Recording started successfully for trigger ${triggerType} in CONTINUOUS mode (stops only on manual command)`);

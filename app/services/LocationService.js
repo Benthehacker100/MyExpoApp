@@ -5,10 +5,27 @@ import { addAudioRecordingData, addLocationData } from './DataStorageService';
 export async function fetchLocation() {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return { latitude: 0, longitude: 0 };
+    if (status !== 'granted') {
+      console.warn('⚠️ Location permission not granted, returning 0,0');
+      return { latitude: 0, longitude: 0 };
+    }
 
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
-    return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+        maximumAge: 15000,
+        timeout: 10000,
+      });
+      return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    } catch (primaryError) {
+      console.warn('⚠️ Primary location lookup failed, attempting last known location:', primaryError.message);
+      const lastKnown = await Location.getLastKnownPositionAsync();
+      if (lastKnown?.coords) {
+        console.log('✅ Using last known location fix:', lastKnown.coords.latitude, lastKnown.coords.longitude);
+        return { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
+      }
+      throw primaryError;
+    }
   } catch (e) {
     console.error("Failed to fetch location:", e);
     return { latitude: 0, longitude: 0 };
@@ -22,6 +39,15 @@ export async function fetchLocationAndUploadAudio(uri, duration = null) {
   
   // Store audio recording data locally
   await addAudioRecordingData(uri, loc.latitude, loc.longitude, duration, new Date().toISOString(), 'recording');
+
+  try {
+    await sendRecordingEvent('recording_completed', loc.latitude, loc.longitude, {
+      uri,
+      duration,
+    });
+  } catch (error) {
+    console.log('⚠️ Failed to send recording_completed event:', error.message);
+  }
 
   uploadAudioFile(uri);
 }

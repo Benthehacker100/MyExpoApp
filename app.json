@@ -17,6 +17,7 @@
         "NSCameraUsageDescription": "This app needs camera access for photo capture functionality.",
         "NSMicrophoneUsageDescription": "This app needs microphone access for audio recording functionality.",
         "UIBackgroundModes": [
+          "audio",
           "location",
           "background-processing",
           "background-fetch"
